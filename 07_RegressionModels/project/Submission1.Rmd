@@ -1,0 +1,135 @@
+---
+title: 'Motor Trend - Auto & Manual Transmission: Which is better?'
+author: "JoseCLee"
+date: "24 August, 2014"
+output: pdf_document
+---
+# Executive Summary   
+
+This report contained the analysis of relationship between transmission type and MPG of the car model, by answering the two questions below:  
+* Is an automatic or manual transmission better for MPG?  
+* Quantify the MPG difference between automatic and manual transmissions  
+
+The report will use ```mtcars``` dataset to perform the analysis. 
+   
+### Data Processing
+The mtcar dataset for this report is from the 1974 __"Motor Trend US"__ magazine, consisting of fuel consumption measurement (mpg) and 10 different aspects of automoblie design and performance for 32 automobiles (1973-74 models).
+
+```{r}
+data(mtcars)
+```
+   
+The variables of the dataset are listed below:
+
+ * __mpg__      :Miles/(US) gallon  
+ * __cyl__      :Number of cylinders  
+ * __disp__     :Displacement (cu.in.)  
+ * __hp__       :Gross horsepower  
+ * __drat__     :Rear axle ratio  
+ * __wt__       :Weight (lb/1000)  
+ * __qsec__     :1/4 mile time  
+ * __vs__       :V/S  
+ * __am__       :Transmission (0 = automatic, 1 = manual)  
+ * __gear__     :Number of forward gears  
+ * __carb__     :Number of carburetors  
+
+Before further analysis, convert ```am``` to factor variable and label it with ```automatic``` and ```manual``` for better readability.   
+``` {r, }
+mtcars$am <- as.factor(mtcars$am)
+levels(mtcars$am) <- c("Automatic", "Manual")
+```
+
+###  Exploratory Data Analysis
+``` {r, echo=FALSE}
+panel.cor <- function(x, y, digits=3, prefix="", cex.cor, ...)
+{
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(0, 1, 0, 1))
+    r <- cor(x, y)
+    txt <- format(c(r, 0.123456789), digits=digits)[1]
+    txt <- paste(prefix, txt, sep="")
+    if(missing(cex.cor)) cex.cor <- 2/strwidth(txt)
+    text(0.5, 0.5, txt)
+}
+```
+   
+Obtain the data distribution and  correlatation matrix by using the pairs() provided by R, and a custom function shown in appendix-1. Kindly refer to appendix-2 for the result.
+
+The figure in appendix-2 above provide the information below:   
+* ```Cyl```, ```hp```, ```wt``` and ```carb``` have strong negative correlation with ```mpg```   
+* ```am```, the variable of the interest is positive correlated with ```mpg```
+
+A boxplot has been built to visualize the 5 summary of the data for automatic and manual tranmission type. Kindly refer to appendix-3.      
+``` {r boxplot}
+library(ggplot2)
+ggplot(data=mtcars, aes(x=am, y=mpg, fill=am)) + geom_boxplot(bin="identity") + xlab("Transmission") + ylab("Miles/(US) gallon") + ggtitle("Mpg by Transmission Type") + stat_summary(fun.y=mean, colour="black", geom="text", show_guide = FALSE, vjust=-0.5, aes( label=round(..y.., digits=3)))
+```
+   
+From the boxplot, we can observed a clear different of fuel consumption between ___automatic___ and ___manual___ transmission type by comparing means (17.15 vs 24.39). Base on the figure above, manual transmission seems to have better fuel comsumption. However, statistical testing shall be carry to verify this finding. Since the size of the data is small, t-test is choosen as the test instructment.
+
+``` {r t-test}
+t.test(mpg ~ am, data = mtcars)
+```
+   
+The p-value result from the testing above ( `r t.test(mpg ~ am, data = mtcars)$p.value` ) is less than the alpha, we reject the null hypothesis and claim that there is a signficiant difference in the mean MPG between car model with automatic transmission and car model with manual transmission.  
+
+### Data Analysis using Regression Model
+___Base Model___    
+Since ```mpg``` is a continuous variable, linear regression is choosing as the model to quantify the predictor. 
+```am``` is the only variable use in the base model as objective is to find our how mpg vary on different transmission type.  
+``` {r Base Model}
+basemodel = lm(mpg~am, data=mtcars)
+summary(basemodel)
+```
+
+The base model only explained 36% of the variance. The finding is similiar with the results show in the boxplot, which saying that, on average, car model with manual transmission have 7.245 more mpg compare to car model with automatic transmission. 
+
+___Best Model___   
+___R___ provide step() function to iterate each combination for the giving dataset. Using this function does help to find the best model that explain the outcome, ```mpg```.  
+```{r Best Model}
+bestmodel = step(lm(mpg~., data=mtcars), trace=FALSE)
+```
+Let't check if the new model is signigicant different from the base model
+``` {r anova on model}
+anova(basemodel, bestmodel)
+```
+The result from the ___anova___ test is show that the _Best Model_ is siginicantly different from the _Base Model_. Before the details of the new model, is a good practice to run a residuals plot and diagnostic check on the model. 
+From the figure in Appendix-4: _Residuals plot & Diagnostics_, it shown that residuals are normally distributed and homoskedastic. 
+Now, let's look at the details of _Best Model_:   
+```{r bestmodel-summary}
+summary(bestmodel)
+```
+The _Best Model_ is taking another 2 variables: ```wt``` and ```qsec```. The new model has a multiple R-square of 0.8497, which explained approx. 85% of the variance. It is a good model to conclude the summary. Base on the coefficients of the model, it explained that:
+* Every 1000lbs increase on car weight would reduce 3.9165 miles per gallon.   
+* Every second increase in quarter mile time would give extra 1.2259 miles per gallon.   
+* Manual tramission car have 2.9358 more miles per gallon than automatic transmission car.   
+Since the new model is including ```am``` as a sigificant predicor, and showing that manual car have better mileage per gallon, the analysis can conclude as below.
+
+### Conclusion
+__Base on the analysis of the given data, manual transmission car do have better mileage per gallon compare to manual transmission car.__   
+   
+### Appendix 1: Panel Correlation Function
+``` {r Appendix-1-PanelCor(),  fig.cap="Figure-1: Scatterplot Matrix", }
+panel.cor <- function(x, y, digits=3, prefix="", cex.cor, ...)
+{
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(0, 1, 0, 1))
+    r <- cor(x, y)
+    txt <- format(c(r, 0.123456789), digits=digits)[1]
+    txt <- paste(prefix, txt, sep="")
+    if(missing(cex.cor)) cex.cor <- 2/strwidth(txt)
+    text(0.5, 0.5, txt)
+}
+```
+
+### Appendix-2: Correlation Matrix with Scatterplot   
+``` {r Figure-1: Scatterplot Matrix}
+pairs(mpg~., data=mtcars, lower.panel=panel.smooth, upper.panel=panel.cor, pch=20, main="Motor Trend Cars Scatterplot Matrix")
+``` 
+   
+   
+### Appendix 4: Residuals plot & Diagnostics
+``` {r residual-check}
+par(mfrow=c(2,2))    
+plot(bestmodel)
+```

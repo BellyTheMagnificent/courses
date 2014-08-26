@@ -1,0 +1,45 @@
+---
+title: "Iris"
+author: "JoseCLee"
+date: "24 August, 2014"
+output: html_document
+---
+
+### Load the iris dataset.
+``` {r}
+data(iris)
+``` 
+### Plot #1: Basic scatterplot matrix of the four measurements
+``` {r}
+pairs(~Sepal.Length+Sepal.Width+Petal.Length+Petal.Width, data=iris)
+```
+
+panel.smooth function is built in.
+panel.cor puts correlation in upper panels, size proportional to correlation
+``` {r}
+panel.cor <- function(x, y, digits=2, prefix="", cex.cor, ...)
+{
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(0, 1, 0, 1))
+    r <- abs(cor(x, y))
+    txt <- format(c(r, 0.123456789), digits=digits)[1]
+    txt <- paste(prefix, txt, sep="")
+    if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
+    text(0.5, 0.5, txt, cex = cex.cor * r)
+}
+```
+ 
+Plot #2: same as above, but add loess smoother in lower and correlation in upper
+
+``` {r}
+pairs(~Sepal.Length+Sepal.Width+Petal.Length+Petal.Width, data=iris,
+      lower.panel=panel.smooth, upper.panel=panel.cor, 
+      pch=20, main="Iris Scatterplot Matrix")
+```
+
+# Plot #3: similar plot using ggplot2
+
+``` {r}
+library(ggplot2)
+##plotmatrix(with(iris, data.frame(Sepal.Length, Sepal.Width, Petal.Length, Petal.Width)))
+```
