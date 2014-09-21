@@ -40,7 +40,7 @@ combine = subset(combine, select = c(predictors, "classe", "problem_id"))
 ## Splitting pre-process data to train and private set
 train_data = subset(combine, is.na(problem_id)==TRUE)
 train_data = subset(train_data, select = -c(problem_id))
-test_data = subset(combine, is.na(problem_id)==FALSE)
+test_data = subset(combine, problem_id %in% 1:20)
 rownames(test_data) = 1:20
 test_data = subset(train_data, select = -c(classe))
 
@@ -63,9 +63,46 @@ print(fit.lda$finalModel)
 predict.lda = predict(fit.lda, newdata = testing)
 confusionMatrix(predict.lda, testing$classe)
 
-## fitting with naive bayes, accuracy = 
-fit.nb = train(classe ~ ., data = training, method = "nb")
+## fitting with naive bayes, too slow
+##fit.nb = train(classe ~ ., data = training, method = "nb")
+##print(fit.lda$finalModel)
+##predict.lda = predict(fit.lda, newdata = testing)
+##confusionMatrix(predict.lda, testing$classe)
+
+## fitting with rf, accuracy = 0.9939
+fit.rf = train(classe ~ ., data = training, method = "rf", importance=TRUE)
+print(fit.rf$finalModel)
+predict.rf = predict(fit.rf, newdata = testing)
+confusionMatrix(predict.rf, testing$classe)
+answers = predict(fit.rf, newdata = test_data)
+dim(test_data)
+## fitting with gbm, accuracy = 0.6999
+fit.gbm = train(classe ~ ., data = training, method = "gbm")
 print(fit.lda$finalModel)
 predict.lda = predict(fit.lda, newdata = testing)
 confusionMatrix(predict.lda, testing$classe)
 
+if(!file.exists(file.path(getwd(), "submission")))
+{
+        dir.create(file.path(getwd(), "submission"))
+}
+
+pml_write_files = function(x,y){
+        n = length(x)
+        for(i in 1:n){
+                filename = file.path(y, paste0("problem_id_",i,".txt"))
+                write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+        }
+}
+
+pml_write_files(answers, file.path(getwd(), "submission"))
+
+library("foreach")
+library("doSNOW")
+registerDoSNOW(makeCluster(4, type="SOCK"))
+
+x <- matrix(runif(500), 100)
+y <- gl(2, 50)
+
+rf <- foreach(ntree = rep(250, 4), .combine = combine, .packages = "randomForest") %dopar%
+        +    randomForest(x, y, ntree = ntree)
